@@ -3,6 +3,7 @@
 #include <glm\glm.hpp>
 #include <math.h>
 #include <random>
+#include <array>
 
 
 #define WIN_WIDTH 640
@@ -35,8 +36,16 @@ void draw_pixel(point2_s p) {
 }
 
 struct triangle_s {
-	point2_s p0{}, p1{}, p2{};
+private:
+	glm::vec3 weights{};
 
+public:
+	std::array<point2_s, 3> p{};
+
+	triangle_s() :p(), weights() {};
+	triangle_s(point2_s _p0, point2_s _p1, point2_s _p2) :p({ _p0,_p1,_p2 }), weights() {};
+
+	// 判断_p2在_p0和_p1组成的线的左边还是右边，线的方向也会决定左右的定义
 	float edge_func(point2_s _p0, point2_s _p1, point2_s _p2) {
 		auto tmp1 = (_p1.pos.x - _p0.pos.x) * (_p2.pos.y - _p0.pos.y);
 		auto tmp2 = (_p1.pos.y - _p0.pos.y) * (_p2.pos.x - _p0.pos.x);
@@ -44,13 +53,19 @@ struct triangle_s {
 	}
 
 	float get_signed_area() {
-		return edge_func(p0, p1, p2) / 2.0;
+		return edge_func(p[0], p[1], p[2]) / 2.0;
 	}
 
-	bool is_point_inside(point2_s p) {
-		const auto ABP = edge_func(p0, p1, p);
-		const auto BCP = edge_func(p1, p2, p);
-		const auto CAP = edge_func(p2, p0, p);
+	bool is_point_inside(point2_s _p) {
+		auto ABP = edge_func(p[0], p[1], _p);
+		auto BCP = edge_func(p[1], p[2], _p);
+		auto CAP = edge_func(p[2], p[0], _p);
+		auto ABC = edge_func(p[0], p[1], p[2]);
+
+		// 归一化权重
+		weights[0] = BCP / ABC;
+		weights[1] = CAP / ABC;
+		weights[2] = ABP / ABC;
 
 		if (ABP >= 0 && BCP >= 0 && CAP >= 0)
 		{
@@ -61,16 +76,17 @@ struct triangle_s {
 	}
 
 	void draw() {
-		auto minX = std::min({ p0.pos.x, p1.pos.x, p2.pos.x });
-		auto minY = std::min({ p0.pos.y, p1.pos.y, p2.pos.y });
-		auto maxX = std::max({ p0.pos.x, p1.pos.x, p2.pos.x });
-		auto maxY = std::max({ p0.pos.y, p1.pos.y, p2.pos.y });
+		auto minX = std::min({ p[0].pos.x, p[1].pos.x, p[2].pos.x });
+		auto minY = std::min({ p[0].pos.y, p[1].pos.y, p[2].pos.y });
+		auto maxX = std::max({ p[0].pos.x, p[1].pos.x, p[2].pos.x });
+		auto maxY = std::max({ p[0].pos.y, p[1].pos.y, p[2].pos.y });
 
 		for (size_t i = minY; i < maxY; i++)
 		{
 			for (size_t j = minX; j < maxX; j++)
 			{
-				point2_s temP{ glm::vec2{j,i},color_t{1,0,0} };
+				color_t tmpColor = p[0].color * weights[0] + p[1].color * weights[1] + p[2].color * weights[2];
+				point2_s temP{ glm::vec2{j,i}, tmpColor };
 
 				if (is_point_inside(temP) == false) {
 					continue;
@@ -117,12 +133,12 @@ int main(int argc, char* argv[]) {
 		};
 		tri0.draw();
 
-		tri0.p0.pos.x = randomInt(0, WIN_WIDTH);
-		tri0.p0.pos.y = randomInt(0, WIN_HEIGHT);
-		tri0.p1.pos.x = randomInt(0, WIN_WIDTH);
-		tri0.p1.pos.y = randomInt(0, WIN_HEIGHT);
-		tri0.p2.pos.x = randomInt(0, WIN_WIDTH);
-		tri0.p2.pos.y = randomInt(0, WIN_HEIGHT);
+		tri0.p[0].pos.x = randomInt(0, WIN_WIDTH);
+		tri0.p[0].pos.y = randomInt(0, WIN_HEIGHT);
+		tri0.p[1].pos.x = randomInt(0, WIN_WIDTH);
+		tri0.p[1].pos.y = randomInt(0, WIN_HEIGHT);
+		tri0.p[2].pos.x = randomInt(0, WIN_WIDTH);
+		tri0.p[2].pos.y = randomInt(0, WIN_HEIGHT);
 		tri0.draw();
 
 		// 更新屏幕
