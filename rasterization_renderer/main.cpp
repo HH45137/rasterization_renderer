@@ -7,8 +7,8 @@
 #include <vector>
 
 
-#define WIN_WIDTH 640
-#define WIN_HEIGHT 480
+#define WIN_WIDTH 640 / 2
+#define WIN_HEIGHT 480 / 2
 #define PIXEL_NUM WIN_WIDTH * WIN_HEIGHT
 
 SDL_Renderer* renderer = nullptr;
@@ -65,6 +65,7 @@ private:
 
 public:
 	std::array<point2_s, 3> p{};
+	glm::vec2 vel = random_velocity(6.0, 10.0);
 
 	triangle_s() :p(), weights() {};
 	triangle_s(point2_s _p0, point2_s _p1, point2_s _p2) :p({ _p0,_p1,_p2 }), weights() {};
@@ -99,6 +100,16 @@ public:
 		return false;
 	}
 
+	// 检测数据是否标准，不符合的话返回false
+	bool is_true_data() {
+		auto ABC = edge_func(p[0], p[1], p[2]);
+		auto BCA = edge_func(p[1], p[2], p[0]);
+		auto CAB = edge_func(p[2], p[0], p[1]);
+		if (ABC < 0 && BCA > 0 && CAB < 0) { return false; }
+
+		return true;
+	}
+
 	void draw() {
 		auto minX = std::min({ p[0].pos.x, p[1].pos.x, p[2].pos.x });
 		auto minY = std::min({ p[0].pos.y, p[1].pos.y, p[2].pos.y });
@@ -128,13 +139,21 @@ int main(int argc, char* argv[]) {
 	// 生成随机位置随机顶点颜色的三角形
 	std::vector<triangle_s> tris;
 	{
-		for (size_t i = 0; i < 30; i++)
+		for (size_t i = 0; i < 100; i++)
 		{
-			tris.push_back(triangle_s{
+			if (tris.size() >= 10) { break; }
+
+			auto tmpT = triangle_s{
 					random_point(),
 					random_point(),
 					random_point()
-				});
+			};
+
+			if (tmpT.is_true_data() == false) {
+				continue;
+			}
+
+			tris.push_back(tmpT);
 		}
 	}
 
@@ -162,20 +181,30 @@ int main(int argc, char* argv[]) {
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 		SDL_RenderClear(renderer);
 
-		// 绘制
-		auto tri0 = triangle_s{
-			{ glm::vec2{125,375}, color_t{1.0,0.0,0.0} },
-			{ glm::vec2{250,125}, color_t{0.0,1.0,0.0} },
-			{ glm::vec2{375,375}, color_t{0.0,0.0,1.0} }
-		};
-		tri0.draw();
+		//// 绘制
+		//auto tri0 = triangle_s{
+		//	{ glm::vec2{125,375}, color_t{1.0,0.0,0.0} },
+		//	{ glm::vec2{250,125}, color_t{0.0,1.0,0.0} },
+		//	{ glm::vec2{375,375}, color_t{0.0,0.0,1.0} }
+		//};
+		//tri0.draw();
 
 		for (auto& tri : tris) {
+			for (size_t i = 0; i < 3; i++) {
+				if (tri.p[i].pos.x < 0 || tri.p[i].pos.x >= WIN_WIDTH) { tri.vel.x = -tri.vel.x; }
+				if (tri.p[i].pos.y < 0 || tri.p[i].pos.y >= WIN_HEIGHT) { tri.vel.y = -tri.vel.y; }
+
+				tri.p[i].pos.x = std::max(0.0f, std::min((float)WIN_WIDTH - 1, tri.p[i].pos.x));
+				tri.p[i].pos.y = std::max(0.0f, std::min((float)WIN_HEIGHT - 1, tri.p[i].pos.y));
+
+				tri.p[i].pos += tri.vel;
+			}
 			tri.draw();
 		}
 
 		// 更新屏幕
 		SDL_RenderPresent(renderer);
+		SDL_Delay(16);
 	}
 
 	// 清理资源
