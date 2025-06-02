@@ -7,8 +7,8 @@
 #include <vector>
 
 
-#define WIN_WIDTH 640 / 2
-#define WIN_HEIGHT 480 / 2
+#define WIN_WIDTH 640 / 1
+#define WIN_HEIGHT 480 / 1
 #define PIXEL_NUM WIN_WIDTH * WIN_HEIGHT
 
 SDL_Renderer* renderer = nullptr;
