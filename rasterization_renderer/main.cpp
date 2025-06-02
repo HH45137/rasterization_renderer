@@ -4,6 +4,7 @@
 #include <math.h>
 #include <random>
 #include <array>
+#include <vector>
 
 
 #define WIN_WIDTH 640
@@ -19,14 +20,37 @@ struct point2_s
 {
 	glm::vec2 pos{};
 	color_t color{};
+
+	point2_s() :pos(), color() {}
+	point2_s(glm::vec2 _pos, color_t _color) :pos(_pos), color(_color) {}
 };
 
 // 生成[min, max]范围内的随机整数
-int randomInt(int min, int max) {
+int random_int(int min, int max) {
 	static std::random_device rd;  // 用于获得随机种子
 	static std::mt19937 gen(rd()); // 梅森旋转算法的随机数引擎
 	std::uniform_int_distribution<> dis(min, max);
 	return dis(gen);
+}
+
+float random_float(float min, float max) {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	std::uniform_int_distribution<> dis(min, max);
+	return dis(gen);
+}
+
+point2_s random_point() {
+	return point2_s{
+		{ random_int(0,WIN_WIDTH), random_int(0,WIN_HEIGHT)	},
+		color_t{random_float(0.0,1.0),random_float(0.0,1.0),random_float(0.0,1.0)}
+	};
+}
+
+glm::vec2 random_velocity(float minSpeed, float maxSpeed) {
+	float angle = random_int(0, 360) * 3.14159f / 180.0f;
+	float speed = minSpeed + (maxSpeed - minSpeed) * (random_int(0, 1000) / 1000.0f);
+	return glm::vec2{ cos(angle) * speed, sin(angle) * speed };
 }
 
 void draw_pixel(point2_s p) {
@@ -101,6 +125,19 @@ public:
 };
 
 int main(int argc, char* argv[]) {
+	// 生成随机位置随机顶点颜色的三角形
+	std::vector<triangle_s> tris;
+	{
+		for (size_t i = 0; i < 30; i++)
+		{
+			tris.push_back(triangle_s{
+					random_point(),
+					random_point(),
+					random_point()
+				});
+		}
+	}
+
 	SDL_Init(SDL_INIT_VIDEO);
 
 	// 创建窗口和渲染器
@@ -133,13 +170,9 @@ int main(int argc, char* argv[]) {
 		};
 		tri0.draw();
 
-		tri0.p[0].pos.x = randomInt(0, WIN_WIDTH);
-		tri0.p[0].pos.y = randomInt(0, WIN_HEIGHT);
-		tri0.p[1].pos.x = randomInt(0, WIN_WIDTH);
-		tri0.p[1].pos.y = randomInt(0, WIN_HEIGHT);
-		tri0.p[2].pos.x = randomInt(0, WIN_WIDTH);
-		tri0.p[2].pos.y = randomInt(0, WIN_HEIGHT);
-		tri0.draw();
+		for (auto& tri : tris) {
+			tri.draw();
+		}
 
 		// 更新屏幕
 		SDL_RenderPresent(renderer);
